@@ -1,0 +1,95 @@
+Imap connection settings 
+const Imap = require('imap');
+
+const imapSettings = [
+  {
+    user: 'account1@example.com',
+    password: 'password1',
+    host: 'imap.example.com',
+    port: 993,
+    tls: true,
+  },
+  {
+    user: 'account2@example.com',
+    password: 'password2',
+    host: 'imap.example.com',
+    port: 993,
+    tls: true,
+  },
+];
+
+imap connection and synchronization
+
+const fetchEmails = async (imap) => {
+  const messages = await imap.searchAsync(['ALL']);
+  const last30Days = new Date();
+  last30Days.setDate(last30Days.getDate() - 30);
+  const filteredMessages = messages.filter((message) => {
+    const date = new Date(message.date);
+    return date >= last30Days;
+  });
+
+  await Promise.all(filteredMessages.map((message) => {
+    return imap.fetchAsync(message, { bodies: '' });
+  }));
+};
+
+const connectImap = async (settings) => {
+  const imap = new Imap(settings);
+
+  imap.once('ready', () => {
+    imap.select('INBOX');
+    fetchEmails(imap);
+  });
+
+  imap.on('mail', (numNewMsgs) => {
+    console.log(`New email received: ${numNewMsgs}`);
+    fetchEmails(imap);
+  });
+
+  imap.on('error', (err) => {
+    console.log(`IMAP error: ${err}`);
+  });
+
+  imap.on('close', () => {
+    console.log('IMAP connection closed');
+  });
+
+  imap.connect();
+};
+
+imapSettings.forEach((settings) => {
+  connectImap(settings);
+});
+
+Persistent Imap connection with idle mode
+
+const idleImap = async (imap) => {
+  imap.on('mail', (numNewMsgs) => {
+    console.log(`New email received: ${numNewMsgs}`);
+    fetchEmails(imap);
+  });
+
+  imap.on('error', (err) => {
+    console.log(`IMAP error: ${err}`);
+  });
+
+  imap.on('close', () => {
+    console.log('IMAP connection closed');
+  });
+
+  await imap.idleAsync();
+};
+
+imapSettings.forEach((settings) => {
+  const imap = new Imap(settings);
+
+  imap.once('ready', () => {
+    imap.select('INBOX');
+    fetchEmails(imap).then(() => {
+      idleImap(imap);
+    });
+  });
+
+  imap.connect();
+});

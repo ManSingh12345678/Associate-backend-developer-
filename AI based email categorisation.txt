@@ -1,0 +1,97 @@
+Data Preparation 
+
+[
+  {
+    "text": "I'm interested in discussing further.",
+    "label": "Interested"
+  },
+  {
+    "text": "I'm not interested in your offer.",
+    "label": "Not Interested"
+  },
+  {
+    "text": "Let's schedule a meeting.",
+    "label": "Meeting Booked"
+  },
+  {
+    "text": "I'm out of office until next week.",
+    "label": "Out of Office"
+  },
+  {
+    "text": "Make money fast!",
+    "label": "Spam"
+  }
+]
+Model training
+
+
+const natural = require('natural');
+const tf = require('@tensorflow/tfjs');
+const fs = require('fs');
+
+// Load the dataset
+const dataset = JSON.parse(fs.readFileSync('dataset.json'));
+
+// Preprocess the text data
+const tokenizer = new natural.WordTokenizer();
+const labels = ['Interested', 'Meeting Booked', 'Not Interested', 'Spam', 'Out of Office'];
+const texts = dataset.map((data) => tokenizer.tokenize(data.text));
+const labelsArray = dataset.map((data) => labels.indexOf(data.label));
+
+// Convert the text data into numerical representations
+const wordDict = {};
+let wordIndex = 0;
+texts.forEach((text) => {
+  text.forEach((word) => {
+    if (!wordDict[word]) {
+      wordDict[word] = wordIndex++;
+    }
+  });
+});
+
+const numericalTexts = texts.map((text) => text.map((word) => wordDict[word]));
+const maxLength = Math.max(...numericalTexts.map((text) => text.length));
+const paddedTexts = numericalTexts.map((text) => {
+  return text.concat(new Array(maxLength - text.length).fill(0));
+});
+
+// Define the model
+const model = tf.sequential();
+model.add(tf.layers.embedding({
+  inputDim: wordIndex,
+  outputDim: 128,
+  inputLength: maxLength,
+}));
+model.add(tf.layers.flatten());
+model.add(tf.layers.dense({
+  units: labels.length,
+  activation: 'softmax',
+}));
+
+// Compile the model
+model.compile({
+  optimizer: tf.optimizers.adam(),
+  loss: 'sparseCategoricalCrossentropy',
+  metrics: ['accuracy'],
+});
+
+// Train the model
+model.fit(tf.tensor2d(paddedTexts), tf.tensor1d(labelsArray), {
+  epochs: 100,
+});
+
+Email Categorization
+
+// Function to categorize an email
+async function categorizeEmail(emailText) {
+  const tokenizedText = tokenizer.tokenize(emailText);
+  const numericalText = tokenizedText.map((word) => wordDict[word] || 0);
+  const paddedText = numericalText.concat(new Array(maxLength - numericalText.length).fill(0));
+  const prediction = model.predict(tf.tensor2d([paddedText]));
+  const labelIndex = prediction.argMax();
+  return labels[labelIndex];
+}
+
+// Example usage
+const emailText = "I'm interested in discussing further.";
+categorizeEmail(emailText).then((label) => console.log(label));

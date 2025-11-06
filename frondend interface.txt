@@ -1,0 +1,233 @@
+Backend Node Js 
+
+const express = require('express');
+const { Client } = require('@elastic/elasticsearch');
+const app = express();
+
+const client = new Client({
+  node: 'http:                  
+});
+
+                           
+const indexMapping = {
+  properties: {
+    subject: { type: '//localhost:9200',
+});
+
+// Define the index mapping
+const indexMapping = {
+  properties: {
+    subject: { type: 'text' },
+    from: { type: 'text' },
+    to: { type: 'text' },
+    body: { type: 'text' },
+    folder: { type: 'keyword' },
+    account: { type: 'keyword' },
+    category: { type: 'keyword' },
+  },
+};
+
+                   
+async function createIndex() {
+  try {
+    await client.indices.create({
+      index: '// Create the index
+async function createIndex() {
+  try {
+    await client.indices.create({
+      index: 'emails',
+      body: {
+        mappings: indexMapping,
+      },
+    });
+    console.log('Index created');
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+createIndex();
+
+                             
+app.get('// API endpoint to get emails
+app.get('/api/emails', async (req, res) => {
+  try {
+    const response = await client.search({
+      index: 'emails',
+      body: {
+        query: {
+          match_all: {},
+        },
+      },
+    });
+    res.json(response.hits.hits);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Failed to retrieve emails' });
+  }
+});
+
+                                
+app.get('// API endpoint to filter emails
+app.get('/api/emails/filter', async (req, res) => {
+  try {
+    const folder = req.query.folder;
+    const account = req.query.account;
+    const response = await client.search({
+      index: 'emails',
+      body: {
+        query: {
+          bool: {
+            must: [
+              { match: { folder: folder } },
+              { match: { account: account } },
+            ],
+          },
+        },
+      },
+    });
+    res.json(response.hits.hits);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Failed to filter emails' });
+  }
+});
+
+                                
+app.get('// API endpoint to search emails
+app.get('/api/emails/search', async (req, res) => {
+  try {
+    const query = req.query.query;
+    const response = await client.search({
+      index: 'emails',
+      body: {
+        query: {
+          multi_match: {
+            query: query,
+            fields: ['subject', 'body'],
+          },
+        },
+      },
+    });
+    res.json(response.hits.hits);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Failed to search emails' });
+  }
+});
+
+app.listen(3000, () => {
+  console.log('Server listening on port 3000');
+});
+
+frontend ( Html css) 
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Email Client</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .email {
+      border-bottom: 1px solid #ccc;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Email Client</h1>
+  <form id="filter-form">
+    <select id="folder">
+      <option value="">All folders</option>
+      <option value="inbox">Inbox</option>
+      <option value="sent">Sent</option>
+    </select>
+    <select id="account">
+      <option value="">All accounts</option>
+      <option value="account1">Account 1</option>
+      <option value="account2">Account 2</option>
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+  <form id="search-form">
+    <input type="text" id="query" placeholder="Search emails">
+    <button type="submit">Search</button>
+  </form>
+  <div id="emails"></div>
+
+  <script>
+    // Fetch emails and display them
+    fetch('/api/emails')
+      .then(response => response.json())
+      .then(emails => {
+        const emailList = document.getElementById('emails');
+        emails.forEach(email => {
+          const emailDiv = document.createElement('div');
+          emailDiv.classList.add('email');
+          emailDiv.innerHTML = `
+            <h2>${email._source.subject}</h2>
+            <p>From: ${email._source.from}</p>
+            <p>To: ${email._source.to}</p>
+            <p>Folder: ${email._source.folder}</p>
+            <p>Account: ${email._source.account}</p>
+            <p>Category: ${email._source.category}</p>
+          `;
+          emailList.appendChild(emailDiv);
+        });
+      });
+
+    // Filter emails
+    document.getElementById('filter-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const folder = document.getElementById('folder').value;
+      const account = document.getElementById('account').value;
+      fetch(`/api/emails/filter?folder=${folder}&account=${account}`)
+        .then(response => response.json())
+        .then(emails => {
+          const emailList = document.getElementById('emails');
+          emailList.innerHTML = '';
+          emails.forEach(email => {
+            const emailDiv = document.createElement('div');
+            emailDiv.classList.add('email');
+            emailDiv.innerHTML = `
+              <h2>${email._source.subject}</h2>
+              <p>From: ${email._source.from}</p>
+              <p>To: ${email._source.to}</p>
+              <p>Folder: ${email._source.folder}</p>
+              <p>Account: ${email._source.account}</p>
+              <p>Category: ${email._source.category}</p>
+            `;
+            emailList.appendChild(emailDiv);
+          });
+        });
+    });
+
+    // Search emails
+    document.getElementById('search-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const query = document.getElementById('query').value;
+      fetch(`/api/emails/search?query=${query}`)
+        .then(response => response.json())
+        .then(emails => {
+          const emailList = document.getElementById('emails');
+          emailList.innerHTML = '';
+          emails.forEach(email => {
+            const emailDiv = document.createElement('div');
+            emailDiv.classList.add('email');
+            emailDiv.innerHTML = `
+              <h2>${email._source.subject}</h2>
+              <p>From: ${email._source.from}</p>
+              <p>To: ${email._source.to}</p>
+              <p>Folder: ${email._source.folder}</p>
+              <p>Account: ${email._source.account}</p>
+              <p>Category: ${email._source.category}</p>
+            `;
+            emailList.appendChild(emailDiv);
+          });
+        });
+    });
+  </script>
+</body>
+</html>

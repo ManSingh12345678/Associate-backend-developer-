@@ -1,0 +1,84 @@
+Vector Database Setup
+
+const { QdrantClient } = require('qdrant-client');
+
+const client = new QdrantClient({
+  host: 'localhost',
+  port: 6333,
+});
+
+// Create a new collection
+async function createCollection() {
+  try {
+    await client.recreateCollection({
+      collection_name: 'suggested_replies',
+      vectors_config: {
+        size: 128,
+        distance: 'Cosine',
+      },
+    });
+    console.log('Collection created');
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+createCollection();
+
+Store Prodution and Outreach Agenta in Vector Database
+
+// Function to embed text into vectors
+const { embed } = require('embeddings');
+
+async function embedText(text) {
+  const vector = await embed(text);
+  return vector;
+}
+
+// Store product and outreach agenda in the vector database
+async function storeAgenda(agenda) {
+  try {
+    const vector = await embedText(agenda);
+    await client.upsert({
+      collection_name: 'suggested_replies',
+      points: [
+        {
+          id: 1,
+          vector: vector,
+          payload: {
+            agenda: agenda,
+          },
+        },
+      ],
+    });
+    console.log('Agenda stored');
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+const agenda = 'We would like to invite you to a final interview.';
+storeAgenda(agenda);
+
+
+Use RAG with LLM to Suggest suggested_replies
+
+// Function to suggest replies using RAG
+async function suggestReplies(query) {
+  try {
+    const queryVector = await embedText(query);
+    const searchResult = await client.search({
+      collection_name: 'suggested_replies',
+      vector: queryVector,
+      limit: 1,
+    });
+    const suggestedReply = searchResult[0].payload.agenda;
+    return suggestedReply;
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// Example usage
+const query = 'Can you schedule a final interview?';
+suggestReplies(query).then((suggestedReply) => console.log(suggestedReply));

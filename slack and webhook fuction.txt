@@ -1,0 +1,63 @@
+slack Notification function
+
+const axios = require('axios');
+
+async function sendSlackNotification(slackWebhookUrl, message) {
+  try {
+    await axios.post(slackWebhookUrl, {
+      text: message,
+    });
+    console.log('Slack notification sent');
+  } catch (error) {
+    console.error('Error sending Slack notification:', error);
+  }
+}
+
+// Example usage
+const slackWebhookUrl = 'https:                              
+const message = '//your-slack-webhook-url.com';
+const message = 'New Interested email received!';
+sendSlackNotification(slackWebhookUrl, message);
+
+Webhook Trigger function
+
+async function triggerWebhook(webhookUrl, data) {
+  try {
+    await axios.post(webhookUrl, data);
+    console.log('Webhook triggered');
+  } catch (error) {
+    console.error('Error triggering webhook:', error);
+  }
+}
+
+// Example usage
+const webhookUrl = 'https:                                
+const data = { email: '//webhook.site/your-unique-url';
+const data = { email: 'example@example.com', label: 'Interested' };
+triggerWebhook(webhookUrl, data);
+
+Email Processing  fuction 
+
+async function processEmail(emailData) {
+  if (emailData.label === 'Interested') {
+    // Trigger webhook
+    const webhookUrl = 'https:                                
+    await triggerWebhook(webhookUrl, emailData);
+
+                              
+    const slackWebhookUrl = '//webhook.site/your-unique-url';
+    await triggerWebhook(webhookUrl, emailData);
+
+    // Send Slack notification
+    const slackWebhookUrl = 'https://your-slack-webhook-url.com';
+    const message = `New Interested email from ${emailData.sender}`;
+    await sendSlackNotification(slackWebhookUrl, message);
+  }
+}
+
+// Example usage
+const emailData = {
+  sender: 'example@example.com',
+  label: 'Interested',
+};
+processEmail(emailData);

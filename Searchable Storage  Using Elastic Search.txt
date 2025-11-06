@@ -1,0 +1,113 @@
+Elastic Search Setup 
+
+docker run -d --name elasticsearch \
+  -p 9200:9200 \
+  -e "discovery.type=single-node" \
+  elasticsearch:8.10.2
+
+const { Client } = require('@elastic/StoreEmailRequestType } from '@elastic/elasticsearch';
+
+const client = new Client({
+  node: 'http://localhost:9200',
+});
+
+// Define the index mapping
+const indexMapping = {
+  properties: {
+    subject: { type: 'text' },
+    from: { type: 'text' },
+    to: { type: 'text' },
+    body: { type: 'text' },
+    folder: { type: 'keyword' },
+    account: { type: 'keyword' },
+  },
+};
+
+// Create the index
+async function createIndex() {
+  try {
+    await client.indices.create({
+      index: 'emails',
+      body: {
+        mappings: indexMapping,
+      },
+    });
+    console.log('Index created');
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// Store an email in Elasticsearch
+async function storeEmail(email) {
+  try {
+    await client.index({
+      index: 'emails',
+      body: email,
+    });
+    console.log('Email stored');
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// Search for emails
+async function searchEmails(query) {
+  try {
+    const response = await client.search({
+      index: 'emails',
+      body: {
+        query: {
+          multi_match: {
+            query: query,
+            fields: ['subject', 'body'],
+          },
+        },
+      },
+    });
+    console.log(response.hits.hits);
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// Filter emails by folder and account
+async function filterEmails(folder, account) {
+  try {
+    const response = await client.search({
+      index: 'emails',
+      body: {
+        query: {
+          bool: {
+            must: [
+              { match: { folder: folder } },
+              { match: { account: account } },
+            ],
+          },
+        },
+      },
+    });
+    console.log(response.hits.hits);
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// Create the index
+createIndex();
+
+// Example usage
+const email = {
+  subject: 'Test Email',
+  from: 'test@example.com',
+  to: 'test@example.com',
+  body: 'This is a test email',
+  folder: 'inbox',
+  account: 'test',
+};
+
+storeEmail(email);
+
+searchEmails('test');
+
+filterEmails('inbox', 'test');
